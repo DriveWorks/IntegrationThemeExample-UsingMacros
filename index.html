@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Using Macros | DriveWorks</title>
+    <style>
+        body { font-family: sans-serif; padding: 1em; margin: 0; }
+        button { margin: 0 1em 1em 0; }
+    </style>
+</head>
+
+<body>
+
+    <button id="run-macro">Run Macro</button>
+
+    <div id="form-output">Loading...</div>
+
+    <script src="config.js"></script>
+    <script>
+        const formOutput = document.querySelector("#form-output");
+        const runButton = document.querySelector("#run-macro");
+
+        // Run on load
+        async function dwClientLoaded() {
+            try {
+
+                // Create DriveWorks API client
+                const DW_CLIENT = new window.DriveWorksLiveClient(config.serverUrl);
+
+                // Login to group
+                await DW_CLIENT.loginGroup(config.groupAlias);
+
+                // Create Specification
+                const specification = await DW_CLIENT.createSpecification(config.groupAlias, config.projectName);
+
+                // Render Specification
+                // - [optional] A Macro can be run without rendering a Form. Used to display any visual changes
+                formOutput.innerHTML = "";
+                await specification.render(formOutput); // [optional]
+
+                // Attach button click
+                runButton.addEventListener("click", async () => {
+
+                    const specificationMacroData = {
+                        "macroName": config.macroName,
+                        "macroArgument": "My Argument", // [optional] The argument to execute the macro with
+                        "caller": "Custom Site Button", // [optional] The name of the Macro caller. Used in Rules to detect what called the Macro
+                    }
+
+                    // Run Macro
+                    // - Macros will only be available if listed in DriveWorksConfigUser.xml - for security
+                    // - For more information, see: https://docs.driveworkspro.com/Topic/IntegrationThemeSettings#Permissions
+                    await DW_CLIENT.runMacro(config.groupAlias, specification.id, specificationMacroData);
+                });
+
+            } catch (error) {
+                console.log(error);
+            }
+        }
+    </script>
+
+    <!-- Option A) Directly load Client Library -->
+    <!-- <script src="https://YOUR-THEME-SERVER.COM/DriveworksLiveIntegrationClient.min.js" onload="dwClientLoaded()"></script> -->
+
+    <!-- Option B) Inject Client Library dynamically from server url in config file -->
+    <script>
+        (function(doc, script) {
+            script = doc.createElement("script");
+            script.src = config.serverUrl + "/DriveWorksLiveIntegrationClient.min.js";
+            script.onload = () => dwClientLoaded(); // Custom local function run when client has loaded
+            doc.body.appendChild(script);
+        }(document));
+    </script>
+
+</body>
+</html>

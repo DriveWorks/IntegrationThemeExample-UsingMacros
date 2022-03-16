@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Using Advanced Macros | DriveWorks</title>
+    <style>
+        body { font-family: sans-serif; padding: 1em; margin: 0; }
+        button { margin: 0 1em 1em 0; }
+    </style>
+</head>
+
+<body>
+
+    <button id="run-macro">Run Macro</button>
+    <button id="run-control-macro">Run Control Macro</button>
+    <button id="run-touch-macro">Run Touch Point Macro</button>
+
+    <div id="form-output">Loading...</div>
+
+    <script src="config.js"></script>
+    <script>
+        const formOutput = document.querySelector("#form-output");
+        const runMacroButton = document.querySelector("#run-macro");
+        const controlMacroButton = document.querySelector("#run-control-macro");
+        const touchMacroButton = document.querySelector("#run-touch-macro");
+
+        // Run on load
+        async function dwClientLoaded() {
+            try {
+
+                // Create DriveWorks API client
+                const DW_CLIENT = new window.DriveWorksLiveClient(config.serverUrl);
+
+                // Login to group
+                await DW_CLIENT.loginGroup(config.groupAlias);
+
+                // Create Specification
+                const specification = await DW_CLIENT.createSpecification(config.groupAlias, config.projectName);
+
+                // Render Specification
+                // - [optional] A Macro can be run without rendering a Form. Used to display any visual changes
+                formOutput.innerHTML = "";
+                await specification.render(formOutput); // [optional]
+
+                // Macro
+                runMacroButton.addEventListener("click", async () => {
+
+                    const specificationMacroData = {
+                        "macroName": config.macroName,
+                        "macroArgument": "My Argument", // [optional] The argument to execute the Macro with
+                        "caller": "Custom Site Button", // [optional] The name of the Macro caller. Used in Rules to detect what called the Macro
+                        "clickPositionX": "1",          // [optional] Returned as 0 if omitted.
+                        "clickPositionY": "2",          // [optional] Returned as 0 if omitted.
+                    }
+
+                    // Run Macro
+                    // - Macros will only be available if listed in DriveWorksConfigUser.xml - for security
+                    // - For more information, see: https://docs.driveworkspro.com/Topic/IntegrationThemeSettings#Permissions
+                    await DW_CLIENT.runMacro(config.groupAlias, specification.id, specificationMacroData);
+                });
+
+                // Control Macro
+                controlMacroButton.addEventListener("click", async () => {
+
+                    // Trigger Macro on Control - set in the Control's properties
+                    await DW_CLIENT.runControlMacro(config.groupAlias, specification.id, "ControlName", {
+                        "macroName": config.macroName,
+                        "clickPositionX": "10", // [optional] Returned as 0 if omitted.
+                        "clickPositionY": "25", // [optional] Returned as 0 if omitted.
+                    });
+                });
+
+                // Touch Point Macro
+                touchMacroButton.addEventListener("click", async () => {
+
+                    await DW_CLIENT.runTouchPointMacro(config.groupAlias, specification.id, "PreviewControlName", {
+                        "address": "Root\\NodeName",
+                        "hitPositionX": "1", // [optional] Returned as 0 if omitted.
+                        "hitPositionY": "2", // [optional] Returned as 0 if omitted.
+                        "hitPositionZ": "3", // [optional] Returned as 0 if omitted.
+                        "hitNormalX": "4",   // [optional] Returned as 0 if omitted.
+                        "hitNormalY": "5",   // [optional] Returned as 0 if omitted.
+                        "hitNormalZ": "6",   // [optional] Returned as 0 if omitted.
+                    });
+                });
+
+            } catch (error) {
+                console.log(error);
+            }
+        }
+    </script>
+
+    <!-- Option A) Directly load Client Library -->
+    <!-- <script src="https://YOUR-THEME-SERVER.COM/DriveworksLiveIntegrationClient.min.js" onload="dwClientLoaded()"></script> -->
+
+    <!-- Option B) Inject Client Library dynamically from server url in config file -->
+    <script>
+        (function(doc, script) {
+            script = doc.createElement("script");
+            script.src = config.serverUrl + "/DriveWorksLiveIntegrationClient.min.js";
+            script.onload = () => dwClientLoaded(); // Custom local function run when client has loaded
+            doc.body.appendChild(script);
+        }(document));
+    </script>
+
+</body>
+</html>
